@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Watering Tracker</title>
+<style>
+:root{--bg:#0c1a12;--card:#12261a;--ink:#e5f0e8;--muted:#8fae99;--accent:#22c55e;--line:#1f3d2b;--warn:#d97706;--bad:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:16px}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:1.5rem;margin-bottom:4px}
+.sub{color:var(--muted);font-size:.92rem;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+input,select,textarea{padding:9px;border-radius:8px;border:1px solid var(--line);background:#08130d;color:var(--ink);font-size:.95rem;width:100%}
+textarea{resize:vertical;min-height:54px}
+label{display:block;color:var(--muted);font-size:.82rem;margin:8px 0 3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{cursor:pointer;border-radius:9px;border:1px solid var(--line);background:#0b1f14;color:var(--ink);padding:9px 12px;font-size:.92rem}
+button.primary{background:var(--accent);border-color:var(--accent);color:#04170c;font-weight:700;width:100%;padding:12px;margin-top:10px}
+button:hover{border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#0b1f14;font-size:.82rem;color:var(--muted)}
+.chip.on{background:var(--accent);color:#04170c;border-color:var(--accent);font-weight:600}
+.plant{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#0e2015}
+.plant h3{font-size:1.05rem;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.due{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:999px}
+.due.ok{background:#14532d;color:#86efac}
+.due.soon{background:#4a2c04;color:#fcd34d}
+.due.over{background:#4c0d0d;color:#fca5a5}
+.tags{margin-top:4px}
+.tag{font-size:.72rem;background:#123422;color:#7dd3a8;border-radius:999px;padding:2px 8px;margin-right:4px}
+.plant .meta{color:var(--muted);font-size:.82rem;margin-top:4px}
+.plant .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.plant .actions button{font-size:.85rem;padding:7px 10px}
+.notes{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.note{font-size:.85rem;color:#cfe7d6;margin:4px 0;display:flex;gap:8px}
+.note time{color:var(--muted);font-size:.75rem;white-space:nowrap;padding-top:2px}
+.pics{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pics img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.empty{color:var(--muted);text-align:center;padding:24px 8px;font-size:.95rem}
+.rowtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.smallbtns{display:flex;gap:8px}
+.smallbtns button{font-size:.82rem;padding:6px 10px}
+footer{color:var(--muted);font-size:.8rem;margin-top:18px;line-height:1.5}
+footer a{color:#86efac}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--muted);font-size:.88rem}
+.del{color:#fca5a5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌱 Plant Watering Tracker</h1>
+  <p class="sub">Custom watering schedules, care notes, tags and progress photos for every plant. Everything is stored on this device only.</p>
+
+  <div class="card">
+    <div class="rowtop"><b>Add a plant</b></div>
+    <label for="pname">Plant name</label>
+    <input id="pname" placeholder="e.g. Money plant - balcony">
+    <div class="grid2">
+      <div>
+        <label for="pdays">Water every (days)</label>
+        <input id="pdays" type="number" min="1" max="90" value="3">
+      </div>
+      <div>
+        <label for="plast">Last watered</label>
+        <input id="plast" type="date">
+      </div>
+    </div>
+    <label for="ptags">Tags (comma separated, e.g. succulents, vegetables)</label>
+    <input id="ptags" placeholder="succulents">
+    <button class="primary" id="addBtn" type="button">Add plant</button>
+  </div>
+
+  <div class="card">
+    <div class="rowtop">
+      <b>Your plants <span id="countLbl"></span></b>
+      <div class="smallbtns">
+        <button id="exportBtn" type="button">Export data</button>
+        <button id="importBtn" type="button">Import</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </div>
+    </div>
+    <div class="chips" id="tagChips"></div>
+    <div id="list"></div>
+  </div>
+
+  <footer>
+    Built after a Reddit request for per-plant watering schedules with notes, tags and progress pics -
+    <a href="https://www.reddit.com/r/developersIndia/comments/1isvhnk/whats_your_i_wish_there_was_an_app_for_that/" rel="noopener">source thread</a>.
+    Plant identification via AI is not included (no paid services). Data and photos stay in this browser (localStorage + IndexedDB); export regularly if you change devices.
+  </footer>
+</div>
+
+<script>
+"use strict";
+//TESTABLE-START
+function daysBetween(aISO, bISO){
+  const a = new Date(aISO + "T00:00:00"), b = new Date(bISO + "T00:00:00");
+  return Math.round((b - a) / 86400000);
+}
+// status of a plant on `todayISO`: overdue / due today / due soon (<=2d) / ok
+function dueStatus(lastWateredISO, intervalDays, todayISO){
+  const since = daysBetween(lastWateredISO, todayISO);
+  const dueIn = intervalDays - since;
+  if (dueIn < 0)  return { state:"over", label:"Overdue by " + (-dueIn) + "d", dueIn };
+  if (dueIn === 0) return { state:"over", label:"Due today", dueIn };
+  if (dueIn <= 2) return { state:"soon", label:"Due in " + dueIn + "d", dueIn };
+  return { state:"ok", label:"Due in " + dueIn + "d", dueIn };
+}
+function todayISO(){ const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+//TESTABLE-END
+
+(function(){
+  const $ = id => document.getElementById(id);
+  const LS = "plantTracker.v1";
+  let plants = [];
+  try{ plants = JSON.parse(localStorage.getItem(LS)) || []; }catch(e){ plants = []; }
+  let activeTag = null;
+
+  function save(){ localStorage.setItem(LS, JSON.stringify(plants)); }
+  function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+  // ---------- IndexedDB for progress photos ----------
+  let db = null;
+  function idb(){ return new Promise((res, rej)=>{
+    if (db) return res(db);
+    const req = indexedDB.open("plantTrackerPhotos", 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore("photos", { keyPath:"id" }); };
+    req.onsuccess = () => { db = req.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });}
+  async function putPhoto(rec){ const d = await idb(); return new Promise((res, rej)=>{ const tx = d.transaction("photos","readwrite"); tx.objectStore("photos").put(rec); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+  async function photosFor(plantId){ const d = await idb(); return new Promise((res, rej)=>{ const out=[]; const cur = d.transaction("photos").objectStore("photos").openCursor(); cur.onsuccess = ()=>{ if(cur.result){ if(cur.result.value.plantId===plantId) out.push(cur.result.value); cur.result.continue(); } else res(out.sort((a,b)=>a.ts-b.ts)); }; cur.onerror = () => rej(cur.error); }); }
+  async function delPhotos(plantId){ const d = await idb(); return new Promise((res)=>{ const tx=d.transaction("photos","readwrite"); const cur=tx.objectStore("photos").openCursor(); cur.onsuccess=()=>{ if(cur.result){ if(cur.result.value.plantId===plantId) cur.result.delete(); cur.result.continue(); } }; tx.oncomplete=res; }); }
+
+  // ---------- rendering ----------
+  async function render(){
+    const t = todayISO();
+    const tagSet = new Set(); plants.forEach(p => (p.tags||[]).forEach(x=>tagSet.add(x)));
+    $("tagChips").innerHTML = "";
+    if (tagSet.size){
+      const all = document.createElement("button");
+      all.className = "chip" + (activeTag===null?" on":""); all.textContent = "All";
+      all.onclick = ()=>{ activeTag=null; render(); };
+      $("tagChips").appendChild(all);
+      [...tagSet].sort().forEach(tag=>{
+        const c = document.createElement("button");
+        c.className = "chip" + (activeTag===tag?" on":""); c.textContent = tag;
+        c.onclick = ()=>{ activeTag = (activeTag===tag?null:tag); render(); };
+        $("tagChips").appendChild(c);
+      });
+    }
+    const list = $("list"); list.innerHTML = "";
+    const shown = plants.filter(p => !activeTag || (p.tags||[]).includes(activeTag))
+      .sort((a,b)=> dueStatus(a.lastWatered,a.interval,t).dueIn - dueStatus(b.lastWatered,b.interval,t).dueIn);
+    $("countLbl").textContent = plants.length ? "(" + shown.length + (activeTag? " of "+plants.length : "") + ")" : "";
+    if (!shown.length){ list.innerHTML = '<div class="empty">No plants yet' + (activeTag ? " with this tag" : "") + '. Add your first one above.</div>'; return; }
+    for (const p of shown){
+      const st = dueStatus(p.lastWatered, p.interval, t);
+      const el = document.createElement("div"); el.className = "plant";
+      el.innerHTML =
+        '<h3>' + esc(p.name) + ' <span class="due ' + st.state + '">' + st.label + '</span></h3>' +
+        '<div class="tags">' + (p.tags||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join("") + '</div>' +
+        '<div class="meta">Every ' + p.interval + 'd · last watered ' + p.lastWatered + '</div>' +
+        '<div class="actions">' +
+          '<button data-act="water">💧 Mark watered today</button>' +
+          '<button data-act="photo">📷 Progress pic</button>' +
+          '<button data-act="note">📝 Add note</button>' +
+          '<button data-act="del" class="del">Delete</button>' +
+        '</div>' +
+        '<div class="notes">' + (p.notes||[]).slice(-5).reverse().map(n=>'<div class="note"><time>'+esc(n.date)+'</time><span>'+esc(n.text)+'</span></div>').join("") + '</div>' +
+        '<div class="pics" data-pics></div>' +
+        '<input type="file" accept="image/*" capture="environment" style="display:none" data-file>';
+      el.querySelector('[data-act="water"]').onclick = ()=>{ p.lastWatered = t; save(); render(); };
+      el.querySelector('[data-act="note"]').onclick = ()=>{
+        const txt = prompt("Note for " + p.name + " (e.g. stressed, needs pruning, fertilizer next watering):");
+        if (txt && txt.trim()){ p.notes = p.notes || []; p.notes.push({ date: t, text: txt.trim() }); save(); render(); }
+      };
+      el.querySelector('[data-act="del"]').onclick = async ()=>{ if (confirm("Delete " + p.name + ", its notes and photos?")){ plants = plants.filter(x=>x.id!==p.id); save(); await delPhotos(p.id); render(); } };
+      const fileIn = el.querySelector("[data-file]");
+      el.querySelector('[data-act="photo"]').onclick = ()=> fileIn.click();
+      fileIn.onchange = async ()=>{
+        const f = fileIn.files[0]; if (!f) return;
+        const blob = await downscale(f, 900);
+        await putPhoto({ id: uid(), plantId: p.id, ts: Date.now(), blob });
+        render();
+      };
+      list.appendChild(el);
+      // photos load independently per card; a slow/failing photo store must not block the list
+      (async (plant, box)=>{
+        try{
+          const pics = await photosFor(plant.id);
+          pics.slice(-8).forEach(rec=>{
+            const img = document.createElement("img");
+            img.alt = plant.name + " progress " + new Date(rec.ts).toLocaleDateString();
+            img.title = new Date(rec.ts).toLocaleString();
+            img.src = URL.createObjectURL(rec.blob);
+            box.appendChild(img);
+          });
+        }catch(e){ /* photos optional */ }
+      })(p, el.querySelector("[data-pics]"));
+    }
+  }
+
+  function downscale(file, maxSide){
+    return new Promise((res)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => res(b || file), "image/jpeg", .8);
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = ()=> res(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  $("addBtn").onclick = ()=>{
+    const name = $("pname").value.trim();
+    const interval = Math.max(1, parseInt($("pdays").value)||3);
+    const last = $("plast").value || todayISO();
+    if (!name){ alert("Give the plant a name first."); return; }
+    const tags = $("ptags").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean);
+    plants.push({ id: uid(), name, interval, lastWatered: last, tags, notes: [] });
+    save(); $("pname").value=""; $("ptags").value=""; render();
+  };
+
+  $("exportBtn").onclick = ()=>{
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), plants }, null, 2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "plant-tracker-backup.json"; a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  $("importBtn").onclick = ()=> $("importFile").click();
+  $("importFile").onchange = ()=>{
+    const f = $("importFile").files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{ try{
+      const data = JSON.parse(r.result);
+      if (Array.isArray(data.plants)){ plants = data.plants; save(); render(); alert("Imported " + plants.length + " plants (photos are not included in exports)."); }
+      else alert("That file does not look like a plant tracker export.");
+    }catch(e){ alert("Could not read that file."); } };
+    r.readAsText(f);
+  };
+
+  $("plast").value = todayISO();
+  render();
+})();
+</script>
+</body>
+</html>
